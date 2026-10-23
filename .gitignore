@@ -1,0 +1,27 @@
+# Binários grandes — não vão pro GitHub
+engine/
+engine-cx/
+GStreamer.framework/
+prefix/
+
+# Logs experimentais (grandes demais)
+logs/*.log
+logs/*.gz
+
+# macOS
+.DS_Store
+._*
+
+# Backups
+*.backup
+*.orig
+*.pre-audio-patch
+
+# Temporários
+*.tmp
+*.swp
+
+# Não excluir: tools/ (patch scripts, pequenos)
+# Não excluir: logs/*.md ou documentação (se existir)
+mods/
+extracted-music/

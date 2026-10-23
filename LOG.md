@@ -1,0 +1,194 @@
+# 📓 LOG.md — Diário de bordo do projeto skyrim-mac
+
+Cada experimento: uma variável por vez, evidência no log bruto (`logs/`).
+
+---
+
+## #001 — Baseline (2026-10-21)
+
+**Setup:** engine Sikarugir 10.0 D3DMetal (cópia própria em `engine/`), prefix recém-inicializado, `SkyrimSE.exe` direto (sem launcher), WINEDEBUG=+err,+seh,+loaddll,+file.
+
+**Resultado: EXIT 53 — jogo nunca chegou aos gráficos.**
+
+**Evidência (`logs/baseline-001.log`, 146.889 linhas):**
+- `SkyrimSE.exe` carregou como native em 0x140000000 ✓
+- DLLs de sistema carregaram normais (user32, uxtheme, concrt140 builtin…) ✓
+- `d3dcompiler_47.dll` **existe** no prefix (probes de d3dcompiler_33/34/35 ausentes são só enumeração normal)
+- Morte: busca `appmanifest_489830.acf` → tenta `steam://run/489830` → **não há Steam** → exit 53
+
+**Diagnóstico:** `SteamAPI_RestartAppIfNecessary(489830)` retornou true → o jogo tenta se relançar via protocolo Steam e sai. Este é o bloqueio clássico que faz "Skyrim não roda em Wine nenhum" quando lançado fora do Steam.
+
+**Decisão:** #002 testa a PRÓXIMA variável (gráficos/D3D11) sem instalar Steam — patch cirúrgico no `steam_api64.dll` do usuário (backup preservado): `SteamAPI_RestartAppIfNecessary` → `xor eax,eax; ret` (retorna false = "já estou no Steam"). Modo diagnóstico; a receita final da comunidade usará Steam real.
+
+---
+
+## #002 — Patch steam_api (diagnóstico de gráficos) — em andamento
+
+## #002 — Patch steam_api RestartAppIfNecessary (2026-10-21)
+
+**Patch:** `SteamAPI_RestartAppIfNecessary` → `xor eax,eax; ret` (tools/patch_steam_api.py, backup .orig).
+**Resultado:** o jogo PASSOU do relançamento — carregou `steam_api64` (native), `bink2w64`, `d3d11`+`dxgi` builtin e **MoltenVK inicializou** (Vulkan→Metal vivo). Morre logo depois, exit 53.
+
+## #003 — Captura das últimas palavras (+debugstr) (2026-10-21)
+
+**Evidência (`logs/run-003-debugstr.log`):**
+```
+[S_API] SteamAPI_Init(): SteamAPI_IsSteamRunning() did not locate a running instance of Steam.
+[S_API] SteamAPI_Init(): Could not determine Steam client install directory.
+```
+→ exit 53 (erro Windows 53 = "network path not found" = Steam ausente).
+
+**Diagnóstico:** este build exige `SteamAPI_Init` bem-sucedido — o jogo não tolera Steam ausente. A rota do patch única não basta.
+
+**Decisão:** instalar o **cliente Steam real no prefixo do projeto** (recipe validada do 3Pi2). Próximo experimento (#004) = primeiro com Steam real → isola de vez a variável gráfica (D3D11/D3DMetal).
+
+## Preparação #004
+- Jogo movido para `SteamLibrary/steamapps/common/Skyrim Special Edition` (biblioteca padrão do Steam)
+- SteamSetup.exe baixado (tools/)
+- A lançar com WINEDEBUG herdado: quando o jogo for iniciado DO Steam, capturamos o log pela herança de ambiente
+
+## #004 — Primeira via Steam real (2026-10-21)
+
+**Setup:** Steam (Wine) instalado no prefixo, login OK, jogo instalado, lançado via `-applaunch 489830`.
+**Resultado:** SteamAPI satisfeito ("steamclient64.dll OK"), launcher do jogo abriu janela (user viu), engine criou threads (WINE_NAME_THREAD), carregou d3d11/dxgi/bink, MoltenVK inicializou — e o jogo saiu silenciosamente. Criou `My Games/Skyrim Special Edition/Skyrim*.ini` (boot interno avançado!).
+
+## #005 — tentativa de telemetria +dxgi/+d3d11
+
+**Descoberta:** os canais +dxgi/+d3d11 do Sikarugir são MUDOS (implementação CX não emite trace). Steam morreu no processo com assert interno (pipes.cpp — efeito dos force-kills repetidos).
+
+## #006 — MoltenVK trace total (2026-10-22) ⭐
+
+**Setup:** MVK_CONFIG_TRACE_VULKAN_CALLS=1 + MVK_CONFIG_LOG_LEVEL=debug +debugstr.
+**Evidência decisiva:**
+- Launcher (`SkyrimSELauncher.exe`) roda PERFEITO — cria VkInstance+VkDevice, UI renderiza (MoltenVK ok), escreve SkyrimPrefs.ini sanas (1366x768 fullscreen)
+- Steam vê a GPU: "Apple M6", vram 16GB, driver MoltenVK
+- **Jogo real (`SkyrimSE.exe`): enumera a GPU 62 vezes (vkEnumeratePhysicalDevices→Props→MemProps em loop) e NUNCA chama vkCreateDevice** → sai em silêncio
+**Diagnóstico:** a camada DXGI/D3D11 do Sikarugir (winemetal) falha dentro de D3D11CreateDevice (antes do VkDevice) de forma silenciosa — o jogo tenta variações 62× e desiste. Sem diagnóstico disponível nessa engine.
+
+**Decisão:** #007 troca de engine → CX26.3+DXMT (família DXVK) que tem log próprio (DXMT_LOG_LEVEL) → vamos capturar QUAL chamada D3D11 do jogo falha.
+
+## #007 — engine CX26.3+DXMT — em andamento
+
+# ═══════════════════════════════════════════════════════════════
+# 🏆 22/10/2026, ~21:00 — SKYRIM SE RODANDO NO MAC! 🏆
+# ═══════════════════════════════════════════════════════════════
+# Tela de criação de personagem VISÍVEL e INTERATIVA.
+# CPU ~100%, engine 3D renderizando via D3DMetal → Metal.
+#
+# ═══ RECEITA COMPLETA (para comunidade) ═══
+#
+# Paredes derrubadas, em ordem:
+#
+# 1. STEAM HANDSHAKE
+#    - Steam (Wine) instalado no prefixo, logado
+#    - steam_api64.dll patchado: RestartAppIfNecessary → xor eax,eax; ret
+#    - SteamAppId=489830 SteamGameId=489830 no env
+#
+# 2. GRÁFICOS (D3DMetal)
+#    - Engine: Wine Sikarugir 10.0 + D3DMetal v2.1
+#    - D3DMETAL_FORCE=1 MOLTENVKCX=1 (ativam o backend Metal)
+#    - MoltenVK inicializa, VkInstance criado, d3d11/dxgi builtin
+#
+# 3. ÁUDIO (patch cirúrgico no SkyrimSE.exe!)
+#    - PROBLEMA: jogo tenta criar decoder WMA via Media Foundation
+#      → GStreamer não consegue escanear plugins dentro do Rosetta/Wine
+#      → decoder retorna NULL → jogo dereferencia pointer inválido → c0000005
+#    - SOLUÇÃO: 4 patches binários no SkyrimSE.exe:
+#      Padrão: "TEST RCX,RCX; JE +6; MOV RAX,[RCX]; CALL [RAX+0x10]"
+#      → o TEST passa (pointer não é null, é GARBAGE 0xF000000000000010)
+#      → o JE não pula (pointer não-zero!)
+#      → MOV RAX,[RCX] crasha
+#      Patch: JE (0x74) → JMP (0xEB) — SEMPRE pula o call
+#      Offsets: 0x100e5b8, 0x100e5c6, 0x100e5f3, 0x100f290 (file offsets)
+#      Resultado: jogo SEM ÁUDIO mas SEM CRASH
+#
+# ═══ VARIÁVEIS DE AMBIENTE (run-skyrim.sh) ═══
+# export WINEPREFIX=<prefix>
+# export DYLD_FALLBACK_LIBRARY_PATH=<engine>/lib:<engine>/lib/external:<engine>/dylibs
+# export PATH=<engine>/bin:$PATH
+# export D3DMETAL_FORCE=1
+# export MOLTENVKCX=1
+# export WINEESYNC=1
+# export WINEMSYNC=1
+# export SteamAppId=489830
+# export SteamGameId=489830
+# export WINEDEBUG="+err,+seh,+debugstr"  # opcional, para debug
+#
+# ═══ PRÓXIMOS PASSOS ═══
+# - [ ] Restaurar áudio: instalar DLLs nativas Windows WMA (wmfdist) no prefixo
+# - [ ] Testar performance/framerate
+# - [ ] Testar salvamento
+# - [ ] Empacotar como preset no 3Pi2
+# - [ ] Guia da comunidade
+#
+# ═══════════════════════════════════════════════════════════════
+
+## #030-031 — Patches no áudio (2026-10-22)
+
+**Patch aplicado:** 4 instâncias de `JE +6` → `JMP +6` no SkyrimSE.exe (padrão: TEST RCX; JE; MOV RAX,[RCX]; CALL [RAX+0x10])
+**Resultado:** JOGO RODANDO. Tela de criação de personagem visível e interativa. Sem áudio (mudo), mas funcional.
+**Backup:** SkyrimSE.exe.pre-audio-patch
+
+## ESTADO PÓS-JOGO (22/10/2026 ~21:30)
+
+**CONFRIMADO PELO USUÁRIO:**
+- ✅ Jogo FUNCIONANDO perfeitamente
+- ✅ Controles respondem (teclado + controle Xbox)
+- ✅ Áudio AMBIENTE funciona
+- ✅ Áudio de AÇÕES funciona
+- ✅ Áudio de MENUS funciona
+- ❌ Vozes/diálogos ausentes (.fuz → XMA)
+- ❌ Música ausente (.xwm → WMA)
+
+**CONCLUSÃO:** Os patches cirúrgicos no exe só silenciaram as chamadas MF/GStreamer
+que crashavam. O XAudio2 base (PCM direto) funciona sem Media Foundation!
+O próximo passo é restaurar o exe e prover DLLs nativas Windows para WMA/XMA.
+
+## Fase 5 — Áudio (23/10/2026)
+
+### Diagnóstico completo
+- Wine's Unix-side loader NÃO carrega dylibs externas via Rosetta (nem com paths absolutos)
+- GStreamer não inicializa dentro do processo Wine (lsof = zero dylibs carregadas)
+- wmadmod.dll builtin é um STUB (131KB, sem decoder real)
+- Sons do BSA: todos PCM .wav (5929 arquivos) — funcionam via XAudio2
+- Músicas .xwm: comprimidas com LZ4 dentro do BSA, não extraíveis com parser atual
+- Vozes .fuz: no Voices_en0.bsa (75408 arquivos), formato XMA
+
+### BREAKTHROUGH: decodificação no macOS
+- GStreamer framework tem: avdec_xma1, avdec_xma2 (VOZES!), avdec_wmav2 (MÚSICA!)
+- Pipeline: extrair .fuz do BSA → decodificar XMA no macOS → repackear .fuz com PCM
+- O jogo toca PCM via XAudio2 (que já funciona!)
+
+### Ferramenta criada
+- tools/fuz_convert.py — parser .fuz + decodificador XMA→PCM + repacker
+- Aguardando download do mod PT-BR (Nexus 105861) pra testar em lote
+
+### Mod encontrado
+- Dublagem Skyrim PT-BR (DovahBR, 6.8k endorsements)
+- USA .fuz (mesmo formato vanilla) — MAS o nosso conversor resolve!
+- Música não incluída ("Songs still in the original language")
+
+# 🎵 BREAKTHROUGH: MÚSICA FUNCIONANDO! (23/10/2026, 12:00)
+
+## O que aconteceu:
+- 263 músicas .xwm do mod "SSE High Quality Music" extraídas
+- Convertidas .xwm → .wav PCM usando GStreamer NO MACOS (fora do Wine!)
+- Instaladas em Data/music/ como loose files (.wav)
+- O jogo ENCONTROU os .wav e tocou via XAudio2 DIRETO!
+- SEM decoder WMA! O XAudio2 PCM já funciona!
+
+## Por que música funciona mas vozes não:
+- MÚSICA: o jogo procura .xwm mas TAMBÉM aceita .wav loose files
+- VOZES: o jogo SEMPRE usa o decoder XMA pra .fuz, sem fallback PCM
+- Resultado: música OK, vozes ainda silenciosas
+
+## Converção das vozes PT-BR:
+- 67839 .fuz files do mod Dublagem PT-BR (DovahBR) extraídos
+- Repackeados com PCM WAV silencioso (lip sync preservado)
+- Instalados em Data/sound/voice/
+- Vozes silenciosas mas o jogo NÃO CRASHA com elas instaladas
+
+## Ferramenta criada:
+- tools/fuz_pcm_repack.py — repackea .fuz substituindo XMA por PCM
+- Suporta FUZC e FUZE formats
+- 67839 arquivos processados com ZERO falhas
