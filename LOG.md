@@ -253,3 +253,31 @@ joga pro decoder WMA (stub) → silêncio.
 - [ ] Batch completo 67.839 arquivos → 22050Hz mono (~8.7GB; só há 17GB livres no SSD)
 - [ ] Rollback dos .fuz bugados restantes (todos serão substituídos no batch)
 - [ ] Atualizar README.md com o formato FUZ correto
+
+## RUN 43 — 2026-10-23: 🏆 MISSÃO CUMPRIDA — 67.839 VOZES PT-BR INSTALADAS
+
+### Batch completo
+- 67.839/67.839 arquivos convertidos (xWMA → PCM 22050Hz mono 16-bit)
+- **ZERO erros, ZERO parse_fail** — 11 workers × ffmpeg, ~15 minutos no M6
+- Instalação: 67.839 bugados apagados, 67.839 novos movidos (mv, mesmo volume)
+- Total: 12GB de vozes PCM em Data/sound/voice/ (loose files > BSA)
+
+### Verificação (amostra aleatória)
+- Elenwen (MQ101), Tullius (MQ302), DLC Dragonborn, NPCs genéricos: **todos PCM ✓ mono ✓ 22050Hz ✓**
+
+### Confirmação do usuário (RUN 42, teste da intro)
+> "deu certo. To muito feliz, o audio da intro do jogo é em portugues dublado
+> e está muito de boa qualidade." — CleversonBamberg, 2026-10-23
+
+### Estado final do áudio do projeto
+| Sistema | Estado |
+|---------|--------|
+| Sons ambiente/ações/UI | ✅ nativo (XAudio2 PCM) |
+| Música | ✅ 263 .xwm → .wav PCM soltos |
+| Vozes | ✅ 67.839 .fuz xWMA → PCM (dublagem PT-BR completa) |
+| LIP sync | ✅ preservado (data LIP original intacta nos .fuz) |
+
+### Próximos passos possíveis
+- [ ] Compressão APFS transparente nos .fuz (afsctool — 12GB → ~6GB, zero impacto no jogo)
+- [ ] Extrair vozes vanilla do BSA (75.408 - as ~7.5k que o mod PT-BR não cobre) e converter também
+- [ ] Converter músicas restantes
