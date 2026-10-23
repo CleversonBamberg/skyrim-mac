@@ -4,7 +4,7 @@
 set -u
 
 PROJECT="/Volumes/SSD120GB/skyrim-mac"
-GAME="/Volumes/SSD120GB/Skyrim Special Edition"
+GAME="/Volumes/SSD120GB/skyrim-mac/prefix/drive_c/Program Files (x86)/Steam/steamapps/common/Skyrim Special Edition"
 export WINEPREFIX="$PROJECT/prefix"
 export PATH="$PROJECT/engine/bin:$PATH"
 export DYLD_FALLBACK_LIBRARY_PATH="$PROJECT/engine/lib:$PROJECT/engine/lib/external:$PROJECT/engine/dylibs"
@@ -13,6 +13,8 @@ export MOLTENVKCX=1
 export WINEESYNC=1
 export WINEMSYNC=1
 export WINEDEBUG="${WINEDEBUG:--all}"
+export SteamAppId=489830
+export SteamOverlayDisable=1
 
 # 1) inicializa o prefixo se necessário
 if [ ! -d "$WINEPREFIX/drive_c/windows" ]; then

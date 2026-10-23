@@ -192,3 +192,64 @@ O próximo passo é restaurar o exe e prover DLLs nativas Windows para WMA/XMA.
 - tools/fuz_pcm_repack.py — repackea .fuz substituindo XMA por PCM
 - Suporta FUZC e FUZE formats
 - 67839 arquivos processados com ZERO falhas
+
+---
+
+## RUN 42 — 2026-10-23: 🔥 BREAKTHROUGH — FORMATO FUZ REAL DESCOBERTO + CONVERSÃO FUNCIONANDO
+
+### O mistério das vozes mudas — RESOLVIDO
+
+Depois de 41 runs tentando decodificar "XMA cru" dos .fuz, descobrimos que **o parser
+do formato FUZ estava errado o tempo todo**. O layout real (confirmado em 8000/8000
+arquivos do mod PT-BR e 20/20 no Voices_en0.bsa vanilla):
+
+```
+offset 0:  "FUZE"
+offset 4:  u32 version (1)
+offset 8:  u32 LIP SIZE        ← estávamos chamando de "audio_size"
+offset 12: LIP sync data       ← estávamos chamando de "audio" (e tentando decodificar como XMA!)
+offset 12+lipSize: RIFF....XWMA  ← O SOM É UM RIFF COMPLETO EMBUTIDO NO FINAL
+```
+
+- O som embutido é **xWMA = WMA v2 (fmt tag 0x0161), 44100Hz stereo**
+- O que extraíamos como "XMA cru" era **LIP sync data** — por isso nenhum decoder funcionava!
+- Tamanho exato fecha em 100% dos arquivos: `12 + lipSize + 8 + riffSize == fileSize`
+
+### Por que as vozes eram mudas no Wine
+
+O jogo precisa do decoder **WMA da Microsoft** (`wmadmod.dll`) — que é um **stub no Wine**.
+Agora fica claro o porquê: o som dos .fuz é WMA, não XMA. O jogo extrai o RIFF/xWMA,
+joga pro decoder WMA (stub) → silêncio.
+
+### A solução (funcionando!)
+
+`tools/fuz_xwma_to_pcm.py`:
+1. Parse layout correto: lipSize + LIP + RIFF embutido
+2. Decodifica o xWMA com ffmpeg (decoder WMA v2 nativo, embutido no pip imageio-ffmpeg)
+3. Remonta: `[FUZE][1][lipSize][LIP][RIFF/WAVE PCM 16-bit]`
+   - PCM toca via XAudio2 direto — sem decoder WMA necessário!
+   - LIP sync original mantido intacto
+
+### Resultados
+
+- fethis (Dragonborn): 38032B xWMA → **811086B PCM, áudio real confirmado**
+- 809 falas do MQ101 (intro) convertidas: **809 ok, 0 erros**
+- Instaladas em Data/sound/voice/ (substituindo os repacks antigos bugados)
+- Envelope de áudio validado: voz com pausas, picos, ~30s de fala (Elenwen MQ101)
+
+### Caminho do decode (para documentar o esforço)
+
+1. ffmpeg `xma2` decoder exigia extradata de 34 bytes (XMA2WAVEFORMATEX) — descoberto
+   lendo `wmaprodec.c` (o decoder XMA mora em wmaprodec.c, não em xmadec.c!)
+2. "XMA" decodificava só lixo parcial (~960 samples) — porque era LIP data, não áudio!
+3. Teste xWMA via `-f xwma` falhou — o conteúdo real era outra coisa (LIP)
+4. Referências-chave: ThyWoof/NswSseSnd (C++ que faz unfuz de SSE: revelou o layout
+   LIP-primeiro + RIFF-depois), suglasp/pwsh_convert_fuz_to_xwm (PowerShell, mesmo layout)
+5. Confirmação forense: scan dos 67k do mod (8000/8000 layout B) + mmap no BSA vanilla (20/20)
+
+### Pendências
+
+- [ ] TESTE NO JOGO: intro (novo jogo) deve falar PT-BR agora
+- [ ] Batch completo 67.839 arquivos → 22050Hz mono (~8.7GB; só há 17GB livres no SSD)
+- [ ] Rollback dos .fuz bugados restantes (todos serão substituídos no batch)
+- [ ] Atualizar README.md com o formato FUZ correto
