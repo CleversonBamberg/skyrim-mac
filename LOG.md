@@ -359,3 +359,24 @@ Aritmética de validação: 36 + fc×24 + Σ(1+len) + 16×filec + tfnl2 == data_
   Bethesda + dublagem/tradução de terceiros + limites de tamanho do Nexus).
 - O caminho: publicar o REPOSITÓRIO como Utility (a comunidade baixa o
   próprio jogo/dublagem/tradução como "Requirements" e roda o instalador).
+
+## RUN 48 — 2026-10-24: 🪄 ASSISTENTE DE 1-CLIQUE (INSTALAR.command)
+
+Fluxo do usuário final (a visão do autor do projeto):
+1. baixa o pacote → extrai
+2. baixa dublagem/tradução (Nexus) e coloca os .7z na mesma pasta
+3. duplo-clique em INSTALAR.command → assistente:
+   [1] checa ambiente (arm64, python3)
+   [2] localiza engine (engine/ local ou 3Pi2 → symlink automático)
+   [3] cria prefixo (wineboot)
+   [4] instala Steam (baixa SteamSetup da Valve se faltar)
+   [5] espera login+download do Skyrim via Biblioteca
+   [6] auto-detecta dublagem/tradução (.7z: olha o conteúdo, não o nome)
+   [7] roda instalar-mac.sh (tudo já validado)
+   [8] cria "Skyrim.command" na MESA — duplo-clique = sobe Steam + jogo
+- tools/criar_atalho.sh: gerador do launcher (verifica Steam via tasklist,
+  sobe em nohup, espera, lança)
+- Testado: syntax ok, atalho gerado na Mesa do autor e funcional
+- Licenças respeitadas: engine (Apple GPTK) e jogo (Steam) NÃO vão no
+  pacote — o assistente baixa/orquestra das fontes oficiais
+- docs/nexus-page.md: descrição EN+PT pronta pra página do Nexus
