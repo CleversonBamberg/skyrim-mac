@@ -54,25 +54,29 @@ echo ""
 echo "─── [2/7] Engine Wine + D3DMetal ───"
 WINE64="$PROJECT/engine/bin/wine64"
 if [ ! -x "$WINE64" ]; then
-    # procura engines do 3Pi2 (padrão do usuário)
     ENGS="$HOME/Library/Application Support/3Pi2/Engines"
-    CAND=""
-    if [ -d "$ENGS" ]; then
-        CAND="$(find "$ENGS" -maxdepth 4 -type f -name wine64 -path "*bin*" | grep -i "sikarugir" | head -1)"
-        [ -z "$CAND" ] && CAND="$(find "$ENGS" -maxdepth 4 -type f -name wine64 -path "*bin*" | head -1)"
+    ENGINEDIR="${ENGINE_DIR:-}"
+    if [ -z "$ENGINEDIR" ] && [ -d "$ENGS" ]; then
+        # engines 3Pi2 têm estrutura de bundle: <engine>/Contents/Resources/bin/wine64
+        CAND="$(find "$ENGS" -maxdepth 6 \( -type f -o -type l \) -name wine64 -path "*bin*" 2>/dev/null \
+                | grep -iE "sikarugir|d3dmetal" | head -1)"
+        [ -z "$CAND" ] && CAND="$(find "$ENGS" -maxdepth 6 \( -type f -o -type l \) -name wine64 -path "*bin*" 2>/dev/null | head -1)"
+        [ -n "$CAND" ] && ENGINEDIR="$(dirname "$(dirname "$CAND")")"
     fi
-    if [ -n "$CAND" ]; then
-        ENGINEDIR="$(dirname "$(dirname "$CAND")")"
+    if [ -n "$ENGINEDIR" ] && [ -x "$ENGINEDIR/bin/wine64" ]; then
         ln -s "$ENGINEDIR" "$PROJECT/engine"
-        ok "engine do 3Pi2 linkada: $(basename "$ENGINEDIR")"
+        ok "engine linkada: $ENGINEDIR"
     else
         falha "Não achei a engine Wine+D3DMetal."
         echo ""
-        echo "  Instale a engine em uma destas formas:"
-        echo "   1. Copie a pasta da engine para $PROJECT/engine/"
-        echo "   2. Instale pelo app 3Pi2 (que coloca em:"
-        echo "      ~/Library/Application Support/3Pi2/Engines/)"
-        echo "   3. Veja o README.md — seção 'Engine necessária'"
+        echo "  Formas de resolver (qualquer uma):"
+        echo "   1. Instale o app 3Pi2 (que instala engines em"
+        echo "      ~/Library/Application Support/3Pi2/Engines/) e rode de novo"
+        echo "   2. Se já tem a engine em outro lugar, aponte pra ela:"
+        echo "      ENGINE_DIR=\"/caminho/da/engine\" ./INSTALAR.command"
+        echo "      (a engine precisa ter bin/, lib/ e dylibs/)"
+        echo "   3. Copie a pasta da engine para $PROJECT/engine/"
+        echo "   4. Veja o README.md — seção 'Engine necessária'"
         echo ""
         echo "  Depois rode este arquivo de novo."
         exit 1
