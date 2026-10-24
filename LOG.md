@@ -281,3 +281,51 @@ joga pro decoder WMA (stub) → silêncio.
 - [ ] Compressão APFS transparente nos .fuz (afsctool — 12GB → ~6GB, zero impacto no jogo)
 - [ ] Extrair vozes vanilla do BSA (75.408 - as ~7.5k que o mod PT-BR não cobre) e converter também
 - [ ] Converter músicas restantes
+
+## RUN 44 — 2026-10-23: 🔑 PARSER BSA v105 DECIFRADO (de vez)
+
+Layout completo do BSA Skyrim SE (version 105), validado matematicamente:
+```
+@0:       header 36B (magic, version=105, offset=36, aflags, fc, filec, tfnl, tfnl2, fflags)
+@36:      folder records (fc × 24B: hash u64, count u32, unk u32, offset u64)
+@36+fc×24: POR PASTA EM ORDEM: [u8 len_total INCLUINDO \0][nome+\0][count × file record 16B]
+          file record: hash u64, size u32 (bits 30/31 = flags compressão), offset u32 (DIRETO, sem correção!)
+depois:   bloco de file names (filec nomes null-terminated, = tfnl2 bytes)
+fim:      DATA contíguo (na ordem dos records)
+```
+Aritmética de validação: 36 + fc×24 + Σ(1+len) + 16×filec + tfnl2 == data_start (bateu EXATO nos 2 BSAs).
+
+### Resultados
+- Voices_en0.bsa: 75.408 .fuz mapeados com nomes completos (record[0].size == FUZ[0] real ✓)
+- Sounds.bsa: 6.198 arquivos (269 .xwm + 5.929 .wav) — extraídos os .xwm
+
+## RUN 45 — Vozes inglesas nos diálogos sem dublagem PT-BR
+
+- Diff BSA (75.408) vs PT-BR instalado (67.839) → **7.638 falas sem dublagem**
+- Extraídas e convertidas (xWMA→PCM 22050Hz mono, 0 erros) e instaladas
+- **Jogo agora com 75.477 falas audíveis** (67.839 PT-BR + 7.638 inglês nas não-dubladas)
+
+## RUN 46 — Legendas PT-BR + música completa
+
+### Tradução (Nexus 58406 "Skyrim - Tradução Completa" v6.0)
+- Instalado conforme guia do autor: `Data/Strings/` (246 arquivos: base+DLC+Update+CC
+  com nomes `_english` e conteúdo PT-BR) + `Data/interface/translate_*.txt`
+- Amostra confirmada: "Túneis da Toca dos Ratos", "Por que você está procurando por um
+  Draconato?" ✓
+- sLanguage default (english) carrega os `_english.STRINGS` = PT-BR na prática — sem mexer em INI
+
+### Música
+- Os 269 .xwm do Sounds.bsa extraídos; 6 faltantes convertidos e instalados
+  (5 do Creation Club + mus_combat_boss do CC bgssse016)
+- **269/269 músicas agora tocam via .wav PCM loose**
+
+### Estado final do projeto
+| Sistema | Status |
+|---------|--------|
+| Gráficos/controles/gameplay | ✅ |
+| Sons ambiente/ações/UI | ✅ nativo |
+| Música | ✅ 269/269 (PCM loose) |
+| Vozes PT-BR | ✅ 67.839 dubladas |
+| Vozes inglês (não-dubladas) | ✅ 7.638 |
+| Legendas PT-BR | ✅ mod 58406 instalado |
+| LIP sync | ✅ preservado |
