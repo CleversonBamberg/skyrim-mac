@@ -25,3 +25,4 @@ logs/*.gz
 # Não excluir: logs/*.md ou documentação (se existir)
 mods/
 extracted-music/
+tools/SteamSetup.exe
