@@ -10,6 +10,17 @@
   <em>Skyrim Special Edition rodando em Apple Silicon com dublagem PT-BR — créditos das screenshots: CleversonBamberg</em>
 </p>
 
+## 📥 Download & Instalação Rápida
+
+**Pacote completo (v1.0): [dist/skyrim-mac-v1.0.zip](dist/skyrim-mac-v1.0.zip)** (~3MB)
+
+1. Baixe o pacote e extraia em qualquer pasta
+2. Coloque os `.7z` da **dublagem PT-BR** ([Nexus #105861](https://www.nexusmods.com/skyrimspecialedition)) e da **tradução** ([Nexus #58406](https://www.nexusmods.com/skyrimspecialedition/mods/58406)) na mesma pasta
+3. Duplo-clique em **INSTALAR.command** e siga o assistente (ele configura Steam, espera você instalar o jogo e faz todo o resto: patches, vozes, música, legendas, compressão)
+4. Jogue pelo atalho **Skyrim.command** que aparece na sua Mesa 🎮
+
+> **Requisito único**: a engine Wine+D3DMetal (o componente Apple GPTK não pode ser redistribuído — veja [Engine necessária](#engine-necessária-não-incluída--grande-demais-pra-github) abaixo). O assistente detecta a do 3Pi2 automaticamente.
+
 ## Status Atual
 
 | Componente | Status |
