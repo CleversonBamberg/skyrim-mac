@@ -145,11 +145,14 @@ python3 tools/fuz_xwma_to_pcm.py arquivo.fuz
 - Steam account logada
 - Mod de dublagem PT-BR (Nexus #105861) — opcional, mas recomendado 😄
 
-### Engine necessária (não incluída — grande demais pra GitHub)
+### Engine necessária (não incluída — componente Apple GPTK é licenciado)
 ```
 ~/Library/Application Support/3Pi2/Engines/wine-sikarugir10.0-d3dmetal2.1/
 ```
-Obtenha do Porting Kit (Wineskin) ou construa do zero. Veja `CHARTER.md` para detalhes.
+**De onde obter (o `INSTALAR.command` detecta as duas automaticamente):**
+1. **App 3Pi2** — instala engines em `~/Library/Application Support/3Pi2/Engines/`
+2. **Apple Game Porting Toolkit** (oficial, conta Apple ID grátis): [developer.apple.com/games/game-porting-toolkit](https://developer.apple.com/games/game-porting-toolkit) — o .pkg instala em `/usr/local/lib/wine`
+3. Ou aponte uma engine que já tenha: `ENGINE_DIR="/caminho" ./INSTALAR.command`
 
 ### Patches necessários
 1. **steam_api64.dll**: `tools/patch_steam_api.py`

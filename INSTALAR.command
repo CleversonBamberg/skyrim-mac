@@ -52,38 +52,50 @@ ok "python3 ✓"
 # ─── [2] Engine Wine+D3DMetal ───
 echo ""
 echo "─── [2/7] Engine Wine + D3DMetal ───"
-WINE64="$PROJECT/engine/bin/wine64"
-if [ ! -x "$WINE64" ]; then
+
+detectar_engine() {
+    # 1) já presente no projeto
+    if [ -x "$PROJECT/engine/bin/wine64" ]; then ok "engine presente em engine/"; return 0; fi
+    # 2) variável manual ENGINE_DIR
+    if [ -n "${ENGINE_DIR:-}" ] && [ -x "$ENGINE_DIR/bin/wine64" ]; then
+        ln -sfn "$ENGINE_DIR" "$PROJECT/engine"
+        ok "engine linkada (ENGINE_DIR): $ENGINE_DIR"; return 0
+    fi
+    # 3) app 3Pi2 (engines em bundle: <engine>/Contents/Resources/bin/wine64)
     ENGS="$HOME/Library/Application Support/3Pi2/Engines"
-    ENGINEDIR="${ENGINE_DIR:-}"
-    if [ -z "$ENGINEDIR" ] && [ -d "$ENGS" ]; then
-        # engines 3Pi2 têm estrutura de bundle: <engine>/Contents/Resources/bin/wine64
+    if [ -d "$ENGS" ]; then
         CAND="$(find "$ENGS" -maxdepth 6 \( -type f -o -type l \) -name wine64 -path "*bin*" 2>/dev/null \
                 | grep -iE "sikarugir|d3dmetal" | head -1)"
         [ -z "$CAND" ] && CAND="$(find "$ENGS" -maxdepth 6 \( -type f -o -type l \) -name wine64 -path "*bin*" 2>/dev/null | head -1)"
-        [ -n "$CAND" ] && ENGINEDIR="$(dirname "$(dirname "$CAND")")"
+        if [ -n "$CAND" ]; then
+            ED="$(dirname "$(dirname "$CAND")")"
+            ln -sfn "$ED" "$PROJECT/engine"
+            ok "engine do 3Pi2 linkada: $ED"; return 0
+        fi
     fi
-    if [ -n "$ENGINEDIR" ] && [ -x "$ENGINEDIR/bin/wine64" ]; then
-        ln -s "$ENGINEDIR" "$PROJECT/engine"
-        ok "engine linkada: $ENGINEDIR"
-    else
-        falha "Não achei a engine Wine+D3DMetal."
-        echo ""
-        echo "  Formas de resolver (qualquer uma):"
-        echo "   1. Instale o app 3Pi2 (que instala engines em"
-        echo "      ~/Library/Application Support/3Pi2/Engines/) e rode de novo"
-        echo "   2. Se já tem a engine em outro lugar, aponte pra ela:"
-        echo "      ENGINE_DIR=\"/caminho/da/engine\" ./INSTALAR.command"
-        echo "      (a engine precisa ter bin/, lib/ e dylibs/)"
-        echo "   3. Copie a pasta da engine para $PROJECT/engine/"
-        echo "   4. Veja o README.md — seção 'Engine necessária'"
-        echo ""
-        echo "  Depois rode este arquivo de novo."
-        exit 1
+    # 4) Apple Game Porting Toolkit oficial (o .pkg instala em /usr/local/lib/wine)
+    if [ -x "/usr/local/lib/wine/bin/wine64" ]; then
+        ln -sfn "/usr/local/lib/wine" "$PROJECT/engine"
+        ok "engine do Apple GPTK (/usr/local/lib/wine)"; return 0
     fi
-else
-    ok "engine presente em engine/"
+    return 1
+}
+
+if ! detectar_engine; then
+    falha "Engine Wine+D3DMetal não encontrada"
+    echo ""
+    echo "  Vou abrir o site oficial da Apple no seu navegador."
+    echo "  Faça login com Apple ID (de graça) e baixe o “Game Porting Toolkit”,"
+    echo "  depois rode o .pkg que baixar. Alternativas: instalar o app 3Pi2,"
+    echo "  ou apontar uma engine que você já tenha:"
+    echo "    ENGINE_DIR=\"/caminho/da/engine\" ./INSTALAR.command"
+    echo ""
+    open "https://developer.apple.com/games/game-porting-toolkit/" 2>/dev/null || true
+    while ! detectar_engine; do
+        pergunta "  Aperte ENTER quando terminar a instalação (Ctrl+C pra sair)…"
+    done
 fi
+WINE64="$PROJECT/engine/bin/wine64"
 
 # ─── [3] Prefixo Wine ───
 echo ""

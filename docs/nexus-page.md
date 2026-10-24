@@ -14,6 +14,7 @@ One-click installer that makes Skyrim Special Edition fully playable on Apple Si
 
 - [Skyrim - Tradução Completa](https://www.nexusmods.com/skyrimspecialedition/mods/58406) — legendas/textos PT-BR
 - Dublagem PT-BR (Nexus #105861) — vozes em português *(adicionar como "mod requirement" se existir como mod page; senão citar no texto)*
+- Engine Wine+D3DMetal: app **3Pi2** OU **Apple Game Porting Toolkit** ([developer.apple.com/games/game-porting-toolkit](https://developer.apple.com/games/game-porting-toolkit), conta Apple ID grátis) — o assistente abre o site e detecta a instalação sozinho
 
 ## Descrição (EN)
 
