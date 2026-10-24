@@ -22,6 +22,32 @@
 | **Vozes (PT-BR dublado!)** | ✅ **FUNCIONANDO** — ver [🔴 A Descoberta do Formato FUZ](#-a-descoberta-do-formato-fuz) |
 | Saves | ✅ (via Steam no prefixo) |
 
+## ⚡ Instalação com 1 comando
+
+Com o ambiente pronto (engine Wine+D3DMetal + Steam + jogo instalados no prefixo — ver a [Receita da comunidade](#receita-da-comunidade-o-que-você-precisa) abaixo):
+
+```bash
+# só patches + vozes (inglês) + música:
+./instalar-mac.sh
+
+# completo — com dublagem PT-BR (#105861) e legendas (#58406):
+PTBR="/caminho/da/dublagem-ou-.7z" TRAD="/caminho/da/traducao-ou-.7z" ./instalar-mac.sh
+```
+
+O script é **idempotente** (pode rodar de novo sem duplicar nada) e faz tudo:
+patches binários → conversão de TODAS as vozes (xWMA→PCM stereo 22050Hz — sem isso
+as vozes ficam mudas no Wine, que não tem decoder WMA) → 269 músicas (.xwm→.wav) →
+strings da tradução → compressão APFS transparente (~50-99% de economia no disco).
+
+### Opções
+| Variável | Default | O que faz |
+|----------|---------|-----------|
+| `PTBR` | – | dublagem PT-BR (pasta extraída ou .7z do Nexus #105861) |
+| `TRAD` | – | tradução de textos (pasta ou .7z do Nexus #58406) |
+| `FUZ_CH` | `2` (stereo) | `1`=mono (metade do espaço; pan 3D mais agressivo) |
+| `GAME_DIR` | auto-detecção | caminho do jogo, se necessário |
+| `COMPACTAR` | `1` | `0` pula a compressão APFS |
+
 ## Paredes derrubadas (crônica)
 
 | # | Parede | Solução |
@@ -85,10 +111,13 @@ python3 tools/fuz_xwma_to_pcm.py arquivo.fuz
 ├── .gitignore          # Exclui binários grandes (engines, prefix, mods)
 ├── run-skyrim.sh       # Lança o jogo direto (SteamAppId + D3DMetal env)
 ├── run-steam.sh        # Lança o cliente Steam dentro do prefixo
+├── instalar-mac.sh    # ⚡ INSTALADOR COMPLETO EM 1 COMANDO (idempotente)
 ├── run-cx.sh           # Lança com engine CrossOver+DXMT (experimental)
 ├── tools/
-│   ├── patch_steam_api.py      # Patch 3 bytes: RestartAppIfNecessary→FALSE
+│   ├── patch_steam_api.py      # Patch steam_api64.dll (idempotente)
+│   ├── patch_skyrimse_exe.py   # Patch 4× JE→JMP no SkyrimSE.exe (anti-crash áudio)
 │   ├── fuz_xwma_to_pcm.py      # 🔊 Conversor de vozes: xWMA→PCM (formato FUZ real)
+│   ├── bsa_extract.py          # 📦 Extrator de BSA v105 puro (parser próprio)
 │   ├── fuz_pcm_repack.py       # (DEPRECATED — parser do layout antigo/errado)
 │   ├── SteamSetup.exe         # Instalador do Steam (baixado)
 │   └── auto-run-014.sh        # Automação de testes

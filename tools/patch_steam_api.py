@@ -8,11 +8,8 @@ Modo diagnóstico — o recipe final usa Steam real.
 import struct, shutil, sys
 
 path = sys.argv[1]
-shutil.copy(path, path + ".orig")
 
 data = bytearray(open(path, "rb").read())
-
-# DOS header → e_lfanew
 e_lfanew = struct.unpack_from("<I", data, 0x3C)[0]
 assert data[e_lfanew:e_lfanew+4] == b"PE\x00\x00", "não é PE"
 coff = e_lfanew + 4
@@ -62,7 +59,13 @@ for i in range(num_names):
 assert func_rva is not None, f"export {target.decode()} não encontrado"
 patch_off = rva_to_offset(func_rva)
 
+# idempotência: já aplicado?
+if bytes(data[patch_off:patch_off+3]) == bytes([0x31, 0xC0, 0xC3]):
+    print(f"já aplicado (31 C0 C3) em {patch_off:#x} — nada a fazer")
+    sys.exit(0)
+
 print(f"export encontrado: RVA {func_rva:#x} → offset de arquivo {patch_off:#x}")
+shutil.copy(path, path + ".orig")
 print(f"bytes originais: {data[patch_off:patch_off+6].hex()}")
 # xor eax, eax ; ret  →  retorna 0 (FALSE)
 data[patch_off:patch_off+3] = bytes([0x31, 0xC0, 0xC3])

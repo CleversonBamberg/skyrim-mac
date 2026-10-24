@@ -329,3 +329,33 @@ Aritmética de validação: 36 + fc×24 + Σ(1+len) + 16×filec + tfnl2 == data_
 | Vozes inglês (não-dubladas) | ✅ 7.638 |
 | Legendas PT-BR | ✅ mod 58406 instalado |
 | LIP sync | ✅ preservado |
+
+## RUN 47 — 2026-10-24: 🧰 FERRAMENTAS PRONTAS PRA COMUNIDADE (instalador 1-comando)
+
+### Áudio stereo (resposta ao feedback do autor)
+- 12.503 falas re-convertidas de mono→stereo 22050Hz (voicetypes malenord/femalenord
+  — NPCs de Riverwood/Whiterun) para reduzir o pan 3D agressivo que o engine
+  aplica a sons mono. Pendente: autor confirmar se estende pro resto.
+- Compressão APFS aplicada ao jogo INTEIRO: 75.745 arquivos (vozes + músicas)
+  via afsctool — PCM stereo com canal duplicado chega a 99% de economia
+  (377KB → 4KB físicos). Livres: 6.3GB → 10GB.
+
+### Ferramentas consolidadas no repo (o "produto" do projeto)
+- `tools/bsa_extract.py` — extrator BSA v105 puro (parser do projeto, com
+  --ext/--filter/--list/--skip-existing; validado nos 2 BSAs do jogo)
+- `tools/patch_skyrimse_exe.py` — os 4 patches JE→JMP com verificação de
+  versão e backup (idempotente)
+- `tools/patch_steam_api.py` — agora idempotente (detecta 31 C0 C3 antes
+  de re-patchear/backupar)
+- `instalar-mac.sh` — **INSTALADOR COMPLETO EM 1 COMANDO**: detecta o jogo,
+  instala ffmpeg via pip, aplica patches, converte dublagem PT-BR (se
+  fornecida via PTBR=), extrai+converte as falas faltantes do BSA (inglês),
+  converte as 269 músicas, instala strings de tradução (TRAD=), cria
+  steam_appid.txt e comprime com afsctool. Idempotente — testado de ponta
+  a ponta num jogo já instalado: pulou tudo, zero retrabalho.
+
+### Divulgação (Nexus Mods)
+- Não é possível distribuir os ARQUIVOS convertidos (~17GB, conteúdo
+  Bethesda + dublagem/tradução de terceiros + limites de tamanho do Nexus).
+- O caminho: publicar o REPOSITÓRIO como Utility (a comunidade baixa o
+  próprio jogo/dublagem/tradução como "Requirements" e roda o instalador).
