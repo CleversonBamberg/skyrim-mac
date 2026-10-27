@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 """
-voz_nativa_lotes.py — Vozes ORIGINAIS (inglês) em PCM 44.1kHz stereo NATIVO.
+voz_nativa_lotes.py — Vozes ORIGINAIS (inglês) em PCM de qualidade NATIVA.
 
 Substitui todas as vozes do jogo pelas originais do BSA vanilla, convertidas
-sem perdas (o xWMA é 44.1kHz stereo — mantemos nativo, sem downsample).
-Processa em LOTES por voicetype com compressão APFS entre lotes para caber
-no disco, monitorando o espaço livre a cada lote.
+1:1 com a fonte (44.1kHz, canais originais — as vozes do jogo são mono 44.1kHz
+nativas). Processa em LOTES por voicetype com compressão APFS entre lotes para
+caber no disco, monitorando o espaço livre a cada lote.
 
 Fluxo:
-  [1] apaga os .fuz atuais (PT-BR/EN antigos — fontes seguras em mods/)
+  [1] modo completo: apaga os .fuz atuais | incremental: mantém os instalados
   [2] por lote: extrai do BSA → converte nativo (fuz_xwma_to_pcm) →
       instala direto em Data/sound/voice/ → comprime pastas (afsctool)
   [3] resumo final
 
 Uso:  python3 tools/voz_nativa_lotes.py
-Env:  VOZ_MAX_LOTE=2500   VOZ_MIN_LIVRE_GB=2
+Env:  VOZ_DATA=<dir Data>  VOZ_BSA=<path do BSA>  VOZ_INCREMENTAL=1
+      VOZ_MAX_LOTE=2500   VOZ_MIN_LIVRE_GB=2
 """
 import os
 import sys
@@ -26,7 +27,7 @@ import importlib.util
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-GAME = "/Volumes/SSD120GB/skyrim-mac/prefix/drive_c/Program Files (x86)/Steam/steamapps/common/Skyrim Special Edition/Data"
+GAME = os.environ.get("VOZ_DATA") or "/Volumes/SSD120GB/skyrim-mac/prefix/drive_c/Program Files (x86)/Steam/steamapps/common/Skyrim Special Edition/Data"
 BSA = os.environ.get("VOZ_BSA") or os.path.join(GAME, "Skyrim - Voices_en0.bsa")
 VOICE = os.path.join(GAME, "sound/voice")
 AFS = os.path.expanduser("~/bin/afsctool")

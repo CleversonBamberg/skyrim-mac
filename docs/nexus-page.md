@@ -23,7 +23,7 @@ One-click installer that makes Skyrim Special Edition fully playable on Apple Si
 Skyrim Special Edition can run on Apple Silicon through Wine + D3DMetal, but **all voices and music are silent**: the game's audio (WMA/xWMA) needs the Microsoft decoder, which is a stub in Wine. This utility fixes **everything automatically**:
 
 - **Audio crash fix** — 4 surgical binary patches (JE→JMP) so the game boots without crashing
-- **All 75,000+ voice lines converted** to PCM (dub included, if you provide the PT-BR dub) — lip-sync preserved
+- **Voice option — your choice**: all 75,000+ lines in native quality — original English voices, or the PT-BR dub (the installer asks!) — lip-sync preserved
 - **All 269 music tracks** converted to WAV PCM
 - **PT-BR subtitles/translation** integrated (if provided)
 - **APFS transparent compression** — PCM would take ~17 GB; with compression the real disk usage drops dramatically
@@ -51,7 +51,7 @@ Skyrim Special Edition can run on Apple Silicon through Wine + D3DMetal, but **a
 O Skyrim Special Edition roda em Apple Silicon via Wine + D3DMetal, mas **todas as vozes e músicas ficam mudas**: o áudio do jogo (WMA/xWMA) precisa do decoder da Microsoft, que é um stub no Wine. Este utilitário resolve **tudo automaticamente**:
 
 - **Correção do crash de áudio** — 4 patches binários cirúrgicos (JE→JMP)
-- **Todas as 75.000+ falas convertidas** para PCM (dublagem PT-BR incluída, se você tiver) — sincronia labial preservada
+- **Opção de vozes — você escolhe**: as 75.000+ falas em qualidade nativa — vozes originais em inglês OU a dublagem PT-BR (o instalador pergunta!) — sincronia labial preservada
 - **Todas as 269 músicas** convertidas para WAV PCM
 - **Legendas/textos PT-BR** integrados
 - **Compressão APFS transparente** — os PCM ocupariam ~17 GB; comprimidos, economiza dramaticamente

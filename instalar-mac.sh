@@ -24,8 +24,8 @@
 #   PTBR=/caminho/da/dublagem ./instalar-mac.sh # + dublagem PT-BR (pasta ou .7z)
 #   TRAD=/caminho/da/traducao ./instalar-mac.sh # + legendas PT-BR (pasta ou .7z)
 #
-# ÁUDIO: FUZ_CH=2 (stereo, recomendado — comportamento igual ao original)
-#       FUZ_CH=1 (mono — metade do espaço, pan 3D mais agressivo)
+# ÁUDIO: vozes convertidas SEMPRE em qualidade NATIVA (1:1 com a fonte:
+#       dublagem → 44.1kHz stereo | originais → 44.1kHz mono, como o jogo)
 # ═══════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
@@ -36,8 +36,6 @@ TOOLS="$SCRIPT_DIR/tools"
 GAME_DIR="${GAME_DIR:-}"
 PTBR="${PTBR:-}"
 TRAD="${TRAD:-}"
-FUZ_RATE="${FUZ_RATE:-22050}"
-FUZ_CH="${FUZ_CH:-2}"
 COMPACTAR="${COMPACTAR:-1}"
 
 WORK="$(mktemp -d -t skyrim-mac-instalacao)"
@@ -114,9 +112,8 @@ if [ -n "$PTBR" ]; then
     fi
     VOICES_SRC="$(find "$PTBR_DIR" -type d -name voice -path "*sound*" | head -1)"
     if [ -n "$VOICES_SRC" ]; then
-        echo "  convertendo $(find "$VOICES_SRC" -name '*.fuz' | wc -l | tr -d ' ') falas da dublagem…"
-        FUZ_RATE="$FUZ_RATE" FUZ_CH="$FUZ_CH" \
-            python3 "$TOOLS/fuz_xwma_to_pcm.py" "$VOICES_SRC" "$WORK/ptbr-pcm/sound/voice"
+        echo "  convertendo $(find "$VOICES_SRC" -name '*.fuz' | wc -l | tr -d ' ') falas da dublagem (nativa: 44.1kHz)…"
+        python3 "$TOOLS/fuz_xwma_to_pcm.py" "$VOICES_SRC" "$WORK/ptbr-pcm/sound/voice"
         cp -R "$WORK/ptbr-pcm/sound/voice/." "$DATA/sound/voice/"
         echo "  ✓ dublagem instalada"
     else
@@ -124,24 +121,10 @@ if [ -n "$PTBR" ]; then
     fi
 fi
 
-# [4b] falas que faltam (do BSA vanilla — inglês)
-echo "── extraindo do BSA as falas que ainda não existem…"
-python3 "$TOOLS/bsa_extract.py" "$DATA/Skyrim - Voices_en0.bsa" "$WORK/vanilla-vozes" \
-    --ext .fuz --skip-existing "$DATA"
-if [ -d "$WORK/vanilla-vozes/sound/voice" ]; then
-    N=$(find "$WORK/vanilla-vozes" -name "*.fuz" | wc -l | tr -d ' ')
-    if [ "$N" -gt 0 ]; then
-        echo "  convertendo $N falas (inglês)…"
-        FUZ_RATE="$FUZ_RATE" FUZ_CH="$FUZ_CH" \
-            python3 "$TOOLS/fuz_xwma_to_pcm.py" "$WORK/vanilla-vozes/sound/voice" "$WORK/vanilla-pcm/sound/voice"
-        cp -R "$WORK/vanilla-pcm/sound/voice/." "$DATA/sound/voice/"
-        echo "  ✓ vozes vanilla instaladas"
-    else
-        echo "  ✓ nada faltando (todas as falas já estão instaladas)"
-    fi
-else
-    echo "  ✓ BSA já 100% coberto"
-fi
+# [4b] completa com as vozes ORIGINAIS do BSA (inglês nativo, lotes, compressão)
+echo "── completando com as vozes originais do jogo (inglês, qualidade nativa)…"
+VOZ_DATA="$DATA" VOZ_INCREMENTAL=1 VOZ_MIN_LIVRE_GB=0.5 \
+    python3 "$TOOLS/voz_nativa_lotes.py" 2>&1 | grep -vE "^  afs:" || true
 echo "✓ total de .fuz no jogo: $(find "$DATA/sound/voice" -name '*.fuz' | wc -l | tr -d ' ')"
 
 # ─── [5] Música ───

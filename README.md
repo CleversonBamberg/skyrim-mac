@@ -50,12 +50,24 @@ patches binários → conversão de TODAS as vozes (xWMA→PCM stereo 22050Hz �
 as vozes ficam mudas no Wine, que não tem decoder WMA) → 269 músicas (.xwm→.wav) →
 strings da tradução → compressão APFS transparente (~50-99% de economia no disco).
 
+## 🎙️ Vozes: dubladas ou originais — você escolhe!
+
+| Opção | Como ativar | O que acontece |
+|-------|-------------|---------------|
+| **Dublagem PT-BR** | Coloque o .7z da dublagem ([Nexus #105861](https://www.nexusmods.com/skyrimspecialedition)) na pasta e responda **S** no assistente | 67 mil falas dubladas (44.1kHz stereo) + as não-dubladas em inglês |
+| **Originais (inglês)** | Sem a dublagem na pasta — ou responda **n** no assistente | Todas as 75.408 falas originais em 44.1kHz mono nativo (idêntico ao Windows) |
+
+Legendas PT-BR independem da escolha (a tradução #58406 é dos textos originais).
+
+**Trocar depois de instalado:**
+- original → dublada: `PTBR="/caminho/da/dublagem.7z" ./instalar-mac.sh`
+- dublada → original: `python3 tools/voz_nativa_lotes.py` (reconverte tudo em inglês nativo)
+
 ### Opções
 | Variável | Default | O que faz |
 |----------|---------|-----------|
 | `PTBR` | – | dublagem PT-BR (pasta extraída ou .7z do Nexus #105861) |
 | `TRAD` | – | tradução de textos (pasta ou .7z do Nexus #58406) |
-| `FUZ_CH` | `2` (stereo) | `1`=mono (metade do espaço; pan 3D mais agressivo) |
 | `GAME_DIR` | auto-detecção | caminho do jogo, se necessário |
 | `COMPACTAR` | `1` | `0` pula a compressão APFS |
 

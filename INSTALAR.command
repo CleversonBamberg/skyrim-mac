@@ -173,7 +173,19 @@ except Exception:
 PYEOF
 )"
     case "$TIPO" in
-        dublagem) PTBR="$f"; ok "dublagem PT-BR: $(basename "$f")" ;;
+        dublagem)
+            echo "  Achei a dublagem PT-BR: $(basename "$f")"
+            pergunta "  Vozes DUBLADAS ou ORIGINAIS? [S]=dubladas, n=originais: "
+            case "$REPLY" in
+                n|N)
+                    echo "  ✓ vozes ORIGINAIS em inglês (as legendas continuam PT-BR!)"
+                    ;;
+                *)
+                    PTBR="$f"
+                    ok "vozes: DUBLAGEM PT-BR"
+                    ;;
+            esac
+            ;;
         traducao) TRAD="$f"; ok "tradução: $(basename "$f")" ;;
         *) echo "  ? ignorando $(basename "$f") (não parece dublagem nem tradução)" ;;
     esac

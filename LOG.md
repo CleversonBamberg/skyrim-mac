@@ -410,3 +410,25 @@ o problema era a dublagem em si.
 - Legendas PT-BR mantidas (246 strings) — modo "legendado"
 - LIP sync preservado | 6.3GB livres | atalho na Mesa funcional
 - Rollback da dublagem: re-baixar Nexus #105861 + PTBR= ./instalar-mac.sh
+
+## RUN 50 — 2026-10-26: 🎙️ ESCOLHA DE ÁUDIO NO INSTALADOR (dublado × original)
+
+A pedido do autor: quem baixar o pacote escolhe o áudio — as duas opções
+no mesmo instalador:
+
+- **INSTALAR.command**: quando acha a dublagem .7z na pasta, agora PERGUNTA:
+  "Vozes DUBLADAS ou ORIGINAIS? [S]/n" (sem a dublagem: inglês direto)
+- **instalar-mac.sh**: conversão SEMPRE nativa (1:1 com a fonte):
+  dublagem → 44.1kHz stereo | originais → 44.1kHz mono (como o jogo original)
+- **[4b] reescrito**: usa tools/voz_nativa_lotes.py incremental (lotes,
+  compressão APFS, guard de espaço) para completar as falas originais
+- **voz_nativa_lotes.py**: parametrizado (VOZ_DATA/VOZ_BSA) para qualquer
+  instalação, não só a do autor
+- **README + nexus-page**: seção "Vozes: dubladas ou originais" com como
+  trocar depois (PTBR=... ./instalar-mac.sh ↔ voz_nativa_lotes.py)
+- Descoberta documentada: as vozes originais do jogo são MONO 44.1kHz
+  (conf. 40 amostras do BSA) — conversão atual é 1:1 fiel ao original
+
+### Estado do jogo do autor
+- 75.408 vozes originais inglesas (nativo) | legendas PT-BR | 269 músicas
+- 6.3GB livres | tudo commitado
