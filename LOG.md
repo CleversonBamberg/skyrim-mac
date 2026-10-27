@@ -380,3 +380,33 @@ Fluxo do usuário final (a visão do autor do projeto):
 - Licenças respeitadas: engine (Apple GPTK) e jogo (Steam) NÃO vão no
   pacote — o assistente baixa/orquestra das fontes oficiais
 - docs/nexus-page.md: descrição EN+PT pronta pra página do Nexus
+
+## RUN 49 — 2026-10-26: 🇺🇸 VOZES ORIGINAIS INGLESAS EM QUALIDADE NATIVA (decisão do autor)
+
+### Contexto
+Após testar a campanha, o autor avaliou: a conversão estava boa, mas a DUBLAGEM
+do mod PT-BR (#105861) é gerada por IA — sotaque inconsistente entre personagens,
+não soa natural. Decisão: vozes ORIGINAIS em inglês + legendas PT-BR (a tradução
+#58406 é dos textos originais — sincroniza perfeitamente com o áudio EN).
+
+### Teste A/B (metodologia)
+Mesma fala (Hadvar, MQ101) convertida em 44.1kHz stereo nas duas versões e
+tocada direto no macOS (afplay): autor confirmou qualidade da conversão OK —
+o problema era a dublagem em si.
+
+### Execução — tools/voz_nativa_lotes.py
+- 75.408 falas extraídas do BSA vanilla e convertidas SEM downsample
+  (44.1kHz nativo, canal nativo — as originais são mono 44.1kHz, fiel ao jogo)
+- Lotes de ~2.500 por voicetype, compressão APFS (afsctool) entre lotes
+- Guard de espaço (parou seguro no lote 23 com 1.7GB livres)
+- Liberação: music-backup (3.3GB, redundante) + dublagem IA (2.6GB,
+  re-baixável no Nexus #105861) → incremental completou os 4.574 restantes
+- Incidente do mv pro disco interno: falhou (disco interno 100% cheio) —
+  BSA permaneceu íntegro no Data (verificado byte a byte: 1.805.869.173)
+- MODO INCREMENTAL adicionado (VOZ_INCREMENTAL=1: pula instaladas, não apaga)
+
+### Estado final
+- 75.408/75.408 vozes inglesas (44.1kHz nativo) | 0 erros reais
+- Legendas PT-BR mantidas (246 strings) — modo "legendado"
+- LIP sync preservado | 6.3GB livres | atalho na Mesa funcional
+- Rollback da dublagem: re-baixar Nexus #105861 + PTBR= ./instalar-mac.sh
