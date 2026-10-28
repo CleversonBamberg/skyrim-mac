@@ -1,0 +1,33 @@
+#VERSÃO 6.0
+
+🛠️ ALTERAÇÕES NO FOMOD
+- Adição do mod "Diseases Have Description": Para quem tem o mod "Description Framework" instalado, todas as doenças agora terão descrições.
+
+📚 LIVROS, DIÁRIOS, CARTAS E NOTAS REVISADOS/CORRIGIDOS
+- Palavras e Filosofia
+- A Heresia Arcturiana
+- Fronteira, Conquista
+- Nota de Maven
+- Uma Traição Hipotética
+
+⚔️ CORREÇÕES DE MISSÕES (DIÁLOGOS E/OU ENTRADAS)
+- O Chamado da Lua (revisão completa e nome alteradom, antigo "Eu o Encontrei ao Luar").
+
+🖥️ INTERFACE
+- Correção na tradução da vantagem (Perk) "Dual Casting" nas árvores de Magia, onde o texto traduzido aparecia cortado.
+- Corrigido o bug que fazia o nome da raça Imperial aparecer em caixa alta (IMPERIAL) em algumas ocasiões.
+
+🔄 OUTRAS CORREÇÕES E ALTERAÇÕES DE TRADUÇÃO
+- Correção de diálogos preconceituosos/racistas dos Juízes Thalmor.
+- Correção do erro de digitação de "Obtnha" para "Obtenha" na missão de adquirir a armadura da Guilda dos Ladrões.
+- Corrigido o nome do ferreiro de Solitude de "birand" para "Beirand".
+- Corrigida a descrição do efeito da Pedra do Corcel.
+- Padronização de "Blackbriar" e "Espinho Negro" para "Espinho-Negro" (com hífen).
+- Atualização do título/sobrenome Nightwielder para Notífero.
+- Correção de "Travessia da Água Escura" para "Travessia da Água Negra".
+- Correção de "Marco Orietal" para "Marco Oriental".
+- Padronização de termos do Império que apareciam erroneamente em letra minúscula.
+- Correção de "Pináculho do Orgulo" para "Pináculo do Orgulho".
+- Correção da tradução de Councilor de "Prefeito" para "Conselheiro".
+- Correção de diversos erros apontados pelos usuários Maboroshi e guips no Discord (foram muitos erros corrigidos e eu não lembro de tudo kkkkk).
+- Correção na tradução de "Old Hroldan" de "Velho Hroldan" para "Velha Hroldan"

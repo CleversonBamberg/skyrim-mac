@@ -1,0 +1,357 @@
+#!/bin/sh
+# wine-wrapper.sh — Auto resolution save + foreground activation + watchdog
+#
+# This wrapper sits between the app launch script and the real Wine binary.
+# It automatically:
+#   1. Saves the current macOS display resolution (if not already saved)
+#   2. Starts a background activator to bring the Wine window to the foreground
+#   3. Starts a detached watchdog to restore resolution when Wine exits
+#   4. execs the real Wine binary
+#
+# The wrapper auto-detects whether it's in a Wineskin app bundle or a
+# PortingKit engine, and finds the tools directory accordingly.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Find the tools directory
+# In a Wineskin app: tools are in SharedSupport/ (parent of wine/bin/)
+# In an engine bundle: tools are in tools/ (sibling of bin/)
+WINE_BIN_DIR="$SCRIPT_DIR"
+WINE_DIR="$(dirname "$WINE_BIN_DIR")"
+TOOLS_DIR=""
+
+# Check for tools as sibling of wine dir (Wineskin: SharedSupport/)
+if [ -x "$WINE_DIR/setresolution" ]; then
+    TOOLS_DIR="$WINE_DIR"
+# Check for tools/ directory (engine bundle)
+elif [ -x "$WINE_DIR/tools/setresolution" ]; then
+    TOOLS_DIR="$WINE_DIR/tools"
+# Check parent (Wineskin: SharedSupport is parent of wine/)
+else
+    PARENT="$(dirname "$WINE_DIR")"
+    if [ -x "$PARENT/setresolution" ]; then
+        TOOLS_DIR="$PARENT"
+    elif [ -x "$PARENT/tools/setresolution" ]; then
+        TOOLS_DIR="$PARENT/tools"
+    fi
+fi
+
+SETRES=""
+ACTIVATE=""
+WATCHDOG=""
+SAVE_FILE="/tmp/.wineskin_saved_resolution"
+
+if [ -n "$TOOLS_DIR" ]; then
+    SETRES="$TOOLS_DIR/setresolution"
+    ACTIVATE="$TOOLS_DIR/activate_wine.sh"
+    WATCHDOG="$TOOLS_DIR/resolution_watchdog.sh"
+fi
+
+# Determine if we're running inside a Wineskin app bundle (game mode)
+# vs a standalone engine (install mode). In game mode, we activate the
+# resolution tools and foreground activator. In install mode, we skip them
+# to avoid changing the display resolution or hiding the dock.
+#
+# Heuristic: in a Wineskin app, the wrapper is at Contents/SharedSupport/wine/bin/wine
+# so WINE_DIR ends with "SharedSupport/wine". During PortingKit install, the engine
+# is extracted to Contents/SharedSupport/wswine.bundle/bin/wine, so WINE_DIR ends
+# with "wswine.bundle" — we must NOT activate tools in that case.
+# Also check for WINE_WRAPPER_TOOLS=1 as an explicit override.
+RUN_TOOLS=0
+case "$WINE_DIR" in
+    */Contents/SharedSupport/wine) RUN_TOOLS=1 ;;
+esac
+# Porting Kit installs to a temp directory (/var/folders/, /tmp/, /private/var/folders/).
+# In install mode, we must NOT activate tools (resolution change, zombie cleanup,
+# esync/msync overrides) — these break the GOG installer and cause resolution flickering.
+APP_BUNDLE_PATH="$(cd "$SCRIPT_DIR/../../../.." 2>/dev/null && pwd)"
+case "$APP_BUNDLE_PATH" in
+    /var/folders/*|/private/var/folders/*|/tmp/*) RUN_TOOLS=0 ;;
+esac
+if [ "${WINE_WRAPPER_TOOLS:-0}" = "1" ]; then
+    RUN_TOOLS=1
+fi
+
+# Also skip tools for system/wineboot commands that aren't the actual game
+# Wineskin.app calls wine for various utilities — we must NOT switch resolution for those.
+if [ "$RUN_TOOLS" = "1" ]; then
+    case "$1" in
+        regedit|wineboot|cmd|control|explorer|winemenubuilder|services|plugplay|\
+        winedevice|svchost|rpcss|start|uninstaller|winecfg|taskmgr|\
+        regedit.exe|wineboot.exe|cmd.exe|control.exe|explorer.exe|winemenubuilder.exe|\
+        services.exe|plugplay.exe|winedevice.exe|svchost.exe|rpcss.exe|\
+        start.exe|uninstaller.exe|winecfg.exe|taskmgr.exe|\
+        hellexec|msiexec|msiexec.exe|rundll32|rundll32.exe|spoolsv|spoolsv.exe|propsys|propsys.exe|\
+        wineconsole|wineconsole.exe|winhlp32|winhlp32.exe|notepad|notepad.exe|clock|clock.exe|\
+        *.reg|/C*regedit*|/c*regedit*|\
+        C:*\\windows\\*|c:*\\windows\\*|\
+        /C*windows*|/c*windows*)
+            RUN_TOOLS=0
+            ;;
+    esac
+    # Also skip if the argument is a Windows system path (system32, syswow64)
+    case "$1" in
+        *system32*|*syswow64*|*\\windows\\*)
+            RUN_TOOLS=0
+            ;;
+    esac
+fi
+
+# Kill zombie wineskinlauncher processes — only in game mode (RUN_TOOLS=1).
+# The NOP patch prevents wineskinlauncher from terminating itself, so utility
+# commands leave zombies behind. During Porting Kit install, wineskinlauncher is
+# actively managing file copies and setup execution, so we must NOT kill it.
+if [ "$RUN_TOOLS" = "1" ]; then
+    APP_NAME="$(basename "$APP_BUNDLE_PATH")"
+    if [ -n "$APP_NAME" ]; then
+        ps aux | grep -i "wineskinlauncher\|WineskinLauncher" | grep -i "$APP_NAME" | grep -v grep | grep -v "$$" | awk '{print $2}' | while read pid; do
+            kill -9 "$pid" 2>/dev/null
+        done
+    fi
+fi
+
+# Find the real Wine binary
+REAL_WINE=""
+for candidate in \
+    "$WINE_DIR/lib/wine/x86_64-unix/wine" \
+    "$WINE_DIR/lib/wine/i386-unix/wine" \
+    "$WINE_DIR/lib/wine/x86_64-unix/wine64"; do
+    if [ -x "$candidate" ]; then
+        REAL_WINE="$candidate"
+        break
+    fi
+done
+
+if [ -z "$REAL_WINE" ]; then
+    if [ -x "$WINE_BIN_DIR/wine64" ]; then
+        REAL_WINE="$WINE_BIN_DIR/wine64"
+    elif [ -x "$WINE_BIN_DIR/wine" ]; then
+        REAL_WINE="$WINE_BIN_DIR/wine"
+    fi
+fi
+
+if [ -z "$REAL_WINE" ]; then
+    echo "Error: Could not find Wine binary" >&2
+    exit 1
+fi
+
+export CX_ROOT="${CX_ROOT:-$WINE_DIR}"
+
+# Disable esync/msync in game mode only — wineskinlauncher hardcodes these to 1,
+# but they cause audio stuttering and timing issues with 32-bit games on WoW64.
+# In install mode, keep wineskinlauncher's defaults (esync=1, msync=1).
+if [ "$RUN_TOOLS" = "1" ]; then
+    export WINEESYNC=0
+    export WINEMSYNC=0
+fi
+
+GET_WINE_PID=""
+if [ -n "$TOOLS_DIR" ]; then
+    GET_WINE_PID="$TOOLS_DIR/get_wine_pid"
+fi
+
+if [ "$RUN_TOOLS" = "1" ]; then
+    # 0. Apply legacy registry defaults on first run (patch user.reg directly)
+    USER_REG="${WINEPREFIX:-$HOME/.wine}/user.reg"
+    MARKER_FILE="${WINEPREFIX:-$HOME/.wine}/.legacy_defaults_imported"
+    if [ -f "$USER_REG" ] && [ ! -f "$MARKER_FILE" ]; then
+        # Ensure Mac Driver section exists and has our legacy settings
+        # Only add keys that don't already exist (don't override user config)
+        if ! grep -q "LegacyResolutionModes" "$USER_REG" 2>/dev/null; then
+            # Find or create [Software\\Wine\\Mac Driver] section
+            if grep -q "\\[Software\\\\\\\\Wine\\\\\\\\Mac Driver\\]" "$USER_REG" 2>/dev/null; then
+                # Section exists, append our keys after the last line of the section
+                sed -i '' '/\\[Software\\\\Wine\\\\Mac Driver\\]/,/^$/{
+                    /^$/i\
+"LegacyResolutionModes"="y"\
+"LegacyCursorFix"="n"\
+"EnableAppNap"="n"\
+"AllowSetGamma"="y"\
+"CaptureDisplaysForFullscreen"="n"
+                }' "$USER_REG" 2>/dev/null
+            else
+                # Section doesn't exist, append it
+                echo '' >> "$USER_REG"
+                echo '[Software\\Wine\\Mac Driver] 0' >> "$USER_REG"
+                echo '"LegacyResolutionModes"="y"' >> "$USER_REG"
+                echo '"LegacyCursorFix"="n"' >> "$USER_REG"
+                echo '"EnableAppNap"="n"' >> "$USER_REG"
+                echo '"AllowSetGamma"="y"' >> "$USER_REG"
+                echo '"CaptureDisplaysForFullscreen"="n"' >> "$USER_REG"
+            fi
+        fi
+        touch "$MARKER_FILE" 2>/dev/null
+    fi
+
+    # 0b. Auto-activate DXMT on first run (if engine has d3d12.dll)
+    DXMT_MARKER="${WINEPREFIX:-$HOME/.wine}/.dxmt_activated"
+    DXMT_D3D12="$WINE_DIR/lib/wine/x86_64-windows/d3d12.dll"
+    ACTIVATE_DXMT="$WINE_DIR/share/wine/activate_dxmt.sh"
+    if [ -f "$DXMT_D3D12" ] && [ -x "$ACTIVATE_DXMT" ] && [ ! -f "$DXMT_MARKER" ]; then
+        echo "[wrapper] Auto-activating DXMT..." >> /tmp/wine_wrapper_debug.log
+        WINEPREFIX="${WINEPREFIX:-$HOME/.wine}" "$ACTIVATE_DXMT" >> /tmp/wine_wrapper_debug.log 2>&1
+        touch "$DXMT_MARKER" 2>/dev/null
+    fi
+
+    # 1. Save current resolution
+    if [ -x "$SETRES" ]; then
+        "$SETRES" save 2>/dev/null
+    fi
+
+    # 2. Skip display resolution change - the game handles fullscreen via D3D9.
+    # Changing display resolution causes AppKit display configuration timeout
+    # and constant resolution flickering during preconfiguration.
+    # GAME_RES="${WINE_GAME_RESOLUTION:-1024x768}"
+    # if [ -x "$SETRES" ]; then
+    #     cp "$SAVE_FILE" "${SAVE_FILE}.orig" 2>/dev/null
+    #     "$SETRES" "$GAME_RES" 2>/dev/null
+    #     mv "${SAVE_FILE}.orig" "$SAVE_FILE" 2>/dev/null
+    # fi
+
+    # 3. Start detached watchdog to restore resolution when wine exits.
+    # Uses perl setsid() to create a new session — survives even SIGKILL of the wrapper
+    # or the entire app process group being terminated by PortingKit/WineskinLauncher.
+    if [ -x "$WATCHDOG" ]; then
+        perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' "$WATCHDOG" </dev/null >/dev/null 2>&1 &
+    fi
+
+    # 4. Start background activator loop via osascript (uses System Events TCC)
+    if [ -x "$GET_WINE_PID" ]; then
+        (
+            for i in $(seq 1 60); do
+                WINE_PID=$("$GET_WINE_PID" 2>/dev/null)
+                if [ -n "$WINE_PID" ]; then
+                    echo "[activator] found PID $WINE_PID at ${i}x0.5s" >> /tmp/wine_activate.log
+                    osascript -e "tell application \"System Events\" to set frontmost of (first process whose unix id is $WINE_PID) to true" 2>/dev/null
+                    echo "[activator] done" >> /tmp/wine_activate.log
+                    break
+                fi
+                sleep 0.5
+            done
+        ) &
+        ACTIVATOR_PID=$!
+    fi
+
+    # 5. Set up trap to restore resolution on any exit (crash, kill, etc.)
+    restore_resolution() {
+        if [ -n "$ACTIVATOR_PID" ]; then
+            kill "$ACTIVATOR_PID" 2>/dev/null
+            wait "$ACTIVATOR_PID" 2>/dev/null
+        fi
+        if [ -x "$SETRES" ]; then
+            "$SETRES" restore 2>>/tmp/wine_watchdog.log
+        fi
+    }
+    trap restore_resolution EXIT INT TERM HUP
+
+    # 6. Run wine in foreground (not exec, so we can restore after)
+    arch -x86_64 "$REAL_WINE" "$@" &
+    WINE_PID=$!
+    # Renice wineserver to -5 for faster IPC response (audio events go through it)
+    sleep 1
+    WINESERVER_PID=$(pgrep -P $WINE_PID wineserver 2>/dev/null || pgrep wineserver 2>/dev/null | head -1)
+    if [ -n "$WINESERVER_PID" ]; then
+        renice -n -5 -p $WINESERVER_PID 2>/dev/null
+        echo "[wrapper] reniced wineserver $WINESERVER_PID to -5" >> /tmp/wine_wrapper_debug.log
+    fi
+    wait $WINE_PID
+    WINE_EXIT=$?
+
+    # 7. Restore resolution (trap also covers this on abnormal exit)
+    restore_resolution
+    trap - EXIT INT TERM HUP
+
+    exit $WINE_EXIT
+else
+    # Install mode: run wine in foreground (not exec) so wineskinlauncher/Porting Kit
+    # waits for the installer to finish before proceeding to setMainApplication.
+    #
+    # wineskinlauncher calls: wine32on64 start /unix /path/to/setup.exe
+    # Wine's `start /unix` launches the exe as a detached process and exits immediately.
+    # We strip `start /unix` so wine runs the installer directly in the foreground.
+
+    # Auto-patch wineskinlauncher so it waits for wineserver to exit before
+    # returning to Porting Kit. Without this, Porting Kit proceeds to
+    # setMainApplication before the installer finishes.
+    #
+    # Patch both the current app bundle AND the wrapper template (for future installs).
+    patch_wineskinlauncher() {
+        local app_dir="$1"
+        local launcher="$app_dir/Contents/MacOS/wineskinlauncher"
+        local real_launcher="$app_dir/Contents/MacOS/wineskinlauncher.real"
+        if [ -f "$launcher" ] && [ ! -f "$real_launcher" ]; then
+            if file "$launcher" 2>/dev/null | grep -q "Mach-O"; then
+                mv "$launcher" "$real_launcher"
+                cat > "$launcher" << 'PATCH_EOF'
+#!/bin/sh
+LAUNCHER_DIR="$(dirname "$0")"
+REAL_LAUNCHER="$LAUNCHER_DIR/wineskinlauncher.real"
+"$REAL_LAUNCHER" "$@"
+LAUNCHER_EXIT=$?
+WINESERVER_PID=$(pgrep -x wineserver 2>/dev/null | head -1)
+if [ -n "$WINESERVER_PID" ]; then
+    for i in $(seq 1 7200); do
+        if ! kill -0 "$WINESERVER_PID" 2>/dev/null; then
+            break
+        fi
+        sleep 1
+    done
+fi
+exit $LAUNCHER_EXIT
+PATCH_EOF
+                chmod +x "$launcher"
+            fi
+        fi
+    }
+    # Patch current app bundle
+    if [ -n "$APP_BUNDLE_PATH" ]; then
+        patch_wineskinlauncher "$APP_BUNDLE_PATH"
+        # Fix NSBGOnly=1 → 0 so installer windows render properly (not just a border)
+        INFO_PLIST="$APP_BUNDLE_PATH/Contents/Info.plist"
+        if [ -f "$INFO_PLIST" ]; then
+            /usr/libexec/PlistBuddy -c 'Set :NSBGOnly 0' "$INFO_PLIST" 2>/dev/null || true
+        fi
+    fi
+    # Patch wrapper template for future installs
+    WRAPPER_TEMPLATE_DIR="$HOME/Library/Application Support/Wineskin/Wrapper"
+    if [ -d "$WRAPPER_TEMPLATE_DIR" ]; then
+        for wrapper_app in "$WRAPPER_TEMPLATE_DIR"/Wineskin-*.app; do
+            [ -d "$wrapper_app" ] || continue
+            patch_wineskinlauncher "$wrapper_app"
+            # Also fix NSBGOnly in the template so future installs get it
+            TEMPLATE_PLIST="$wrapper_app/Contents/Info.plist"
+            if [ -f "$TEMPLATE_PLIST" ]; then
+                /usr/libexec/PlistBuddy -c 'Set :NSBGOnly 0' "$TEMPLATE_PLIST" 2>/dev/null || true
+            fi
+        done
+    fi
+
+    INSTALL_ARGS="$*"
+    case "$1" in
+        start)
+            # Strip "start /unix" prefix — run the exe directly instead
+            shift 2 2>/dev/null || shift 1
+            ;;
+    esac
+    # Start a background activator to bring the installer window to the foreground.
+    if [ -x "$GET_WINE_PID" ]; then
+        (
+            for i in $(seq 1 120); do
+                WINE_PID=$("$GET_WINE_PID" 2>/dev/null)
+                if [ -n "$WINE_PID" ]; then
+                    osascript -e "tell application \"System Events\" to set frontmost of (first process whose unix id is $WINE_PID) to true" 2>/dev/null
+                    break
+                fi
+                sleep 0.5
+            done
+        ) &
+        ACTIVATOR_PID=$!
+    fi
+    arch -x86_64 "$REAL_WINE" "$@"
+    WINE_EXIT=$?
+    if [ -n "$ACTIVATOR_PID" ]; then
+        kill "$ACTIVATOR_PID" 2>/dev/null
+        wait "$ACTIVATOR_PID" 2>/dev/null
+    fi
+    exit $WINE_EXIT
+fi

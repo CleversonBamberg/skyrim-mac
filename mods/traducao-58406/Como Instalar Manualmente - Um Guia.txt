@@ -1,0 +1,41 @@
+|----------------INTRUÇÕES PARA INSTALAÇÃO MANUAL------------------------------------------------------------------------------
+|
+|	Antes de mais nada, obrigado por usar minha tradução!															
+|
+|	A melhor maneira de instalar esta tradução é com um gerenciador de mods (NMM, Vortex ou MO2)							
+|	Se você não usa um e quer instalar manualmente mas não sabe como fazê-lo este manual te ajudará.						
+|
+|	Note que as traduções foram divididas em duas pastas: Tradução Principal e Traduções Opcionais,						
+|	a primeira contem opções para uma tradução completa do jogo base + dlcs + mods do creation club e a segunda contém		
+|	traduções dos mods Unofficial Skyrim Special Edition Patch e Unofficial Skyrim Creation Club Content Patches.		
+|
+|	(caso não saiba, mods do creation club são mods "oficiais" da própria Bethesda, quase como DLCs, são 74 se você possuir
+|	a versão Anniversary Edition e 4 se você possuir a versão Special Edition).						
+|
+|	Links para os mods da pasta de traduções opcionais podem ser encontrados na página desta tradução						
+|	https://www.nexusmods.com/skyrimspecialedition/mods/58406 (veja a aba "Requirements/Requerimentos")									
+|
+|
+|----------------MODO DE INSTALAÇÃO--------------------------------------------------------------------------------------------
+|
+|	PASSO 1: Tadução Principal																								
+|	Abra a pasta Traducao Principal #1 e você verá 4 pastas. A pasta "Creation Club" contém as traduções dos mods do CC e as pastas
+|	com os números das versões contém as traduções dos arquivos de Interface, Jogo Base, Update e DLCs.																											
+|
+|	Abra a pasta da versão correspondente ao seu jogo, copie tudo que estiver dentro dela e cole dentro da pasta Data do	
+|	diretório do Skyrim, escolha substituir caso haja algum conflito.		
+|
+|	Abra a pasta Creation Club, copie a pasta "Strings" dentro dela e cole dentro da pasta Data do	diretório do Skyrim,
+|	escolha substituir caso haja algum conflito.|
+|
+|
+|
+|	PASSO 2: Traduções Opcionais																							
+|	(VOCÊ PODE IGNORAR ESSE PASSO CASO VOCÊ NÃO USE ESSES MODS OU NÃO QUEIRA NENHUMA DESSAS TRADUÇÕES.)			
+|	Abra a pasta Traducoes Opcionais #2 e você verá 2 pastas, cada uma com a tradução de um mod diferente					
+|
+|	Copie o arquivo dentro da pasta da tradução que você quiser e cole dentro da pasta Data do diretório do Skyrim, escolha
+|	substituir.		
+|
+|	IMPORTANTE: Instalar manualmente umas dessas traduções opnionais só funcionará se você tiver instalado manualmente o 
+|	mod original.
